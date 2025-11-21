@@ -1,5 +1,22 @@
-import { integer, sqliteTable } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
-export const test = sqliteTable("test", {
-  id: integer("id").primaryKey(),
+type Tokenizer =
+  | "WordTokenizer"
+  | "PrefixTokenizer"
+  | "NgramTokenizer"
+  | "SingularTokenizer";
+
+export const indexTokens = sqliteTable(
+  "index_tokens",
+  {
+    id: integer().primaryKey(),
+    token: text().notNull(),
+    weight: integer().notNull(),
+  },
+  (t) => [unique().on(t.token, t.weight)]
+);
+
+export const indexEntries = sqliteTable("index_entries", {
+  id: integer().primaryKey(),
+  // todo
 });

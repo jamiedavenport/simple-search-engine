@@ -1,16 +1,15 @@
 import { db, eq, schema } from "./db";
-import { indexTokens } from "./db/schema";
 
-interface Tokenizer {
+interface Parser {
   readonly weight: number;
 
-  tokenize: (text: string) => string[];
+  parse: (text: string) => string[];
 }
 
-export class WordTokenizer implements Tokenizer {
+export class WordParser implements Parser {
   readonly weight = 20;
 
-  tokenize(text: string) {
+  parse(text: string) {
     return Array.from(
       new Set(
         text
@@ -27,11 +26,11 @@ export class WordTokenizer implements Tokenizer {
 
 const NGRAM_LENGTH = 3;
 
-export class NgramTokenizer implements Tokenizer {
+export class NgramParser implements Parser {
   readonly weight = 1;
 
-  tokenize(text: string) {
-    const words = new WordTokenizer().tokenize(text);
+  parse(text: string) {
+    const words = new WordParser().parse(text);
 
     return Array.from(
       new Set(
@@ -49,11 +48,11 @@ export class NgramTokenizer implements Tokenizer {
 
 const MIN_PREFIX_LENGTH = 4;
 
-export class PrefixTokenizer implements Tokenizer {
+export class PrefixParser implements Parser {
   readonly weight = 5;
 
-  tokenize(text: string) {
-    const words = new WordTokenizer().tokenize(text);
+  parse(text: string) {
+    const words = new WordParser().parse(text);
 
     return Array.from(
       new Set(
@@ -80,9 +79,9 @@ export type Document = {
 
 export class SearchEngine {
   private tokenizers = [
-    new WordTokenizer(),
-    new NgramTokenizer(),
-    new PrefixTokenizer(),
+    new WordParser(),
+    new NgramParser(),
+    new PrefixParser(),
   ];
 
   private upsertToken(token: string, weight: number) {

@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import { NgramTokenizer, PrefixTokenizer, WordTokenizer } from "./search";
+import { NgramParser, PrefixParser, WordParser } from "./search";
 
-test("NgramTokenizer", () => {
-  expect(new NgramTokenizer().tokenize("parser")).toMatchInlineSnapshot(`
+test("NgramParser", () => {
+  expect(new NgramParser().parse("parser")).toMatchInlineSnapshot(`
     [
       "par",
       "ars",
@@ -12,8 +12,8 @@ test("NgramTokenizer", () => {
   `);
 });
 
-test("PrefixTokenizer", () => {
-  expect(new PrefixTokenizer().tokenize("parser")).toMatchInlineSnapshot(`
+test("PrefixParser", () => {
+  expect(new PrefixParser().parse("parser")).toMatchInlineSnapshot(`
     [
       "pars",
       "parse",
@@ -22,9 +22,8 @@ test("PrefixTokenizer", () => {
   `);
 });
 
-test("WordTokenizer", () => {
-  expect(new WordTokenizer().tokenize("   Hello, world!    "))
-    .toMatchInlineSnapshot(`
+test("WordParser", () => {
+  expect(new WordParser().parse("   Hello, world!    ")).toMatchInlineSnapshot(`
     [
       "hello",
       "world",

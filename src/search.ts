@@ -1,4 +1,4 @@
-import { db, schema } from "./db";
+import { db, eq, schema } from "./db";
 import { indexTokens } from "./db/schema";
 
 interface Tokenizer {
@@ -95,7 +95,11 @@ export class SearchEngine {
       .returning();
   }
 
-  index(document: Document) {}
+  async index(document: Document) {
+    await db
+      .delete(schema.indexEntries)
+      .where(eq(schema.indexEntries.documentId, document.getDocumentId()));
+  }
 
   search(documentType: string, query: string, limit = 25) {}
 }

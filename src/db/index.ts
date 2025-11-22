@@ -6,3 +6,4 @@ export const db = drizzle("file:./db.sqlite", {
 });
 
 export { schema };
+export * from "drizzle-orm";

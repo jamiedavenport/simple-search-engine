@@ -1,4 +1,4 @@
-import type { Document, Field } from "./indexer/document";
+import type { Document, Field } from "./search";
 
 export class Post implements Document {
   constructor(
@@ -6,6 +6,7 @@ export class Post implements Document {
     public readonly title: string,
     public readonly content: string
   ) {}
+
   getDocumentId(): number {
     return this.id;
   }

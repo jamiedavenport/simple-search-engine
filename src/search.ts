@@ -1,3 +1,6 @@
+import { db, schema } from "./db";
+import { indexTokens } from "./db/schema";
+
 interface Tokenizer {
   readonly weight: number;
 
@@ -65,4 +68,34 @@ export class PrefixTokenizer implements Tokenizer {
       )
     );
   }
+}
+
+export type Field = [string, string, number]; // [name, value, weight]
+
+export type Document = {
+  getDocumentId(): number;
+  getDocumentType(): string;
+  getIndexableFields(): Field[];
+};
+
+export class SearchEngine {
+  private tokenizers = [
+    new WordTokenizer(),
+    new NgramTokenizer(),
+    new PrefixTokenizer(),
+  ];
+
+  private upsertToken(token: string, weight: number) {
+    return db
+      .insert(schema.indexTokens)
+      .values({ token, weight })
+      .onConflictDoNothing({
+        target: [schema.indexTokens.token, schema.indexTokens.weight],
+      })
+      .returning();
+  }
+
+  index(document: Document) {}
+
+  search(documentType: string, query: string, limit = 25) {}
 }

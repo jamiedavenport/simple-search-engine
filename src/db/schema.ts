@@ -9,7 +9,7 @@ type Tokenizer =
 export const indexTokens = sqliteTable(
   "index_tokens",
   {
-    id: integer().primaryKey(),
+    id: integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
     token: text().notNull(),
     weight: integer().notNull(),
   },

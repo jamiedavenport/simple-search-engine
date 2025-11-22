@@ -1,4 +1,4 @@
-import { db, eq, schema } from "./db";
+import { and, db, eq, schema, inArray, desc } from "./db";
 
 interface Parser {
   readonly weight: number;
@@ -78,27 +78,99 @@ export type Document = {
 };
 
 export class SearchEngine {
-  private tokenizers = [
-    new WordParser(),
-    new NgramParser(),
-    new PrefixParser(),
-  ];
+  private parsers = [new WordParser(), new NgramParser(), new PrefixParser()];
 
-  private upsertToken(token: string, weight: number) {
-    return db
+  private async upsertToken(token: string, weight: number) {
+    const found = await db.query.indexTokens.findFirst({
+      where: eq(schema.indexTokens.token, token),
+    });
+
+    if (found) {
+      return found;
+    }
+
+    const [created] = await db
       .insert(schema.indexTokens)
       .values({ token, weight })
       .onConflictDoNothing({
         target: [schema.indexTokens.token, schema.indexTokens.weight],
       })
       .returning();
+
+    if (!created) {
+      throw new Error(`Failed to upsert token: ${token}`);
+    }
+
+    return created;
   }
 
   async index(document: Document) {
     await db
       .delete(schema.indexEntries)
       .where(eq(schema.indexEntries.documentId, document.getDocumentId()));
+
+    for (const [fieldId, value, fieldWeight] of document.getIndexableFields()) {
+      for (const parser of this.parsers) {
+        const tokens = parser.parse(value);
+        for (const token of tokens) {
+          const indexToken = await this.upsertToken(token, parser.weight);
+
+          await db.insert(schema.indexEntries).values({
+            documentId: document.getDocumentId(),
+            documentType: document.getDocumentType(),
+            tokenId: indexToken.id,
+            fieldId,
+            weight:
+              Math.ceil(Math.sqrt(token.length)) * parser.weight * fieldWeight,
+          });
+        }
+      }
+    }
   }
 
-  search(documentType: string, query: string, limit = 25) {}
+  async search(documentType: string, query: string, limit = 25) {
+    const tokens = Array.from(
+      new Set(
+        this.parsers
+          .flatMap((parser) => parser.parse(query))
+          .sort((a, b) => b.length - a.length)
+      )
+    );
+
+    const results = await db
+      .selectDistinct({
+        documentType: schema.indexEntries.documentType,
+        documentId: schema.indexEntries.documentId,
+        token: schema.indexTokens.token,
+        weight: schema.indexTokens.weight,
+      })
+      .from(schema.indexEntries)
+      .innerJoin(
+        schema.indexTokens,
+        eq(schema.indexEntries.tokenId, schema.indexTokens.id)
+      )
+      .where(
+        and(
+          eq(schema.indexEntries.documentType, documentType),
+          inArray(schema.indexTokens.token, tokens)
+        )
+      )
+      .orderBy(desc(schema.indexTokens.weight))
+      .limit(limit);
+
+    const uniqueMap = new Map<
+      string,
+      { documentId: number; documentType: string }
+    >();
+    for (const row of results) {
+      const key = `${row.documentType}:${row.documentId}`;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, {
+          documentId: row.documentId,
+          documentType: row.documentType,
+        });
+      }
+    }
+    return Array.from(uniqueMap.values());
+  }
 }
